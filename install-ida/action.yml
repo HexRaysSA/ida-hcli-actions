@@ -33,16 +33,11 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
-    - name: Install uv
-      shell: bash
-      run: |
-        echo "Installing uv..."
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-        
-        # Verify uv installation
-        export PATH="$HOME/.cargo/bin:$PATH"
-        uv --version
+    - name: Setup Python with uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
 
     - name: Install Hex-Rays CLI
       shell: bash
