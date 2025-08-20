@@ -204,3 +204,4 @@ __marimo__/
 .DS_Store
 CLAUDE.md
 .idea
+.secrets
