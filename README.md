@@ -1,6 +1,8 @@
-# Install IDA Pro Action
+# Install IDA GitHub Action
 
 A GitHub Action to download and install IDA Pro using the Hex-Rays Command Line Interface (hcli). **Handles all dependencies automatically** - no need to set up Python or uv separately!
+
+This can be used to include a CI workflow for your plugins. The action works with linux, windows and macos.
 
 ## 📋 Prerequisites
 
@@ -9,9 +11,13 @@ Before using this action, you need:
 1. **Valid IDA Pro License**: You must have a valid IDA Pro license from Hex-Rays
 2. **Hex-Rays CLI API Key**: Create an API key using the Hex-Rays CLI:
    ```bash
+   hcli login 
    hcli auth key create
    ```
-   For detailed instructions, see the [Hex-Rays CLI documentation](https://hcli.docs.hex-rays.com/)
+
+For detailed instructions, see the [Hex-Rays CLI documentation](https://hcli.docs.hex-rays.com/)
+
+You can check your licenses and API keys on [https://my.hex-rays.com](https://my.hex-rays.com)
 
 ### Required Repository Secrets
 
