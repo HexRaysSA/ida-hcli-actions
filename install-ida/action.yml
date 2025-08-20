@@ -25,6 +25,14 @@ inputs:
     required: false
     default: '3.10'
 
+outputs:
+  ida-dir:
+    description: 'Directory where IDA Pro was installed'
+    value: ${{ steps.install.outputs.ida-dir }}
+  ida-bin:
+    description: 'Path to IDA Pro binary'
+    value: ${{ steps.install.outputs.ida-bin }}
+
 runs:
   using: 'composite'
   steps:
@@ -63,6 +71,7 @@ runs:
         mkdir -p "$IDADIR"
 
     - name: Download and install IDA Pro
+      id: install
       shell: bash
       run: |
         echo "Downloading and installing IDA Pro..."
@@ -89,8 +98,15 @@ runs:
           IDABIN="$IDADIR/ida"
         fi
         
+        # Set outputs for the action
+        echo "ida-dir=$IDADIR" >> $GITHUB_OUTPUT
+        echo "ida-bin=$IDABIN" >> $GITHUB_OUTPUT
+        
+        # Also set environment variables for backward compatibility and convenience
+        echo "IDADIR=$IDADIR" >> $GITHUB_ENV
         echo "IDABIN=$IDABIN" >> $GITHUB_ENV
-        echo "IDABIN environment variable set to $IDABIN"
+        
+        echo "IDA Pro outputs set - IDADIR: $IDADIR, IDABIN: $IDABIN"
       env:
         HCLI_API_KEY: ${{ inputs.api-key }}
 

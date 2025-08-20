@@ -7,8 +7,8 @@ A GitHub Action to download and install IDA Pro using the Hex-Rays Command Line 
 - 🐍 **Automatic Python setup** - Sets up the specified Python version
 - 📦 **Automatic uv installation** - Installs the latest uv package manager
 - 🔧 **Automatic hcli installation** - Installs Hex-Rays CLI tool
-- 📁 **IDA Pro installation** - Downloads and installs IDA Pro to `/opt/ida`
-- 🔗 **Environment setup** - Sets `IDADIR` for subsequent steps
+- 📁 **IDA Pro installation** - Downloads and installs IDA Pro to temp directory  
+- 🔗 **Environment setup** - Sets `IDADIR` and `IDABIN` for subsequent steps
 - ✅ **Installation verification** - Verifies successful installation
 - 🧹 **Flexible cleanup** - Option to clean up tools or keep them available
 
@@ -31,19 +31,24 @@ A GitHub Action to download and install IDA Pro using the Hex-Rays Command Line 
 | `license-id` | Your IDA Pro license ID | ✅ | - |
 | `api-key` | Hex-Rays Command Line Interface API key | ✅ | - |
 | `python-version` | Python version to set up | ❌ | `3.10` |
-| `hcli-version` | ida-hcli version to install | ❌ | `0.6.0` |
+| `hcli-version-specifier` | ida-hcli version specifier (e.g., ">=0.6.0") | ❌ | `>=0.6.0` |
 | `clean` | Clean up tools after installation (true/false) | ❌ | `true` |
 
 ## Outputs
 
 | Output | Description |
 |--------|-------------|
-| `ida-dir` | Directory where IDA Pro was installed (`/opt/ida`) |
-| `python-version` | Python version that was set up |
+| `ida-dir` | Directory where IDA Pro was installed |
+| `ida-bin` | Path to IDA Pro binary (platform-specific) |
 
 ## Environment Variables Set
 
-After installation, the action sets the `IDADIR` environment variable to `/opt/ida` for use in subsequent workflow steps.
+For convenience, the action also sets these environment variables for use in subsequent workflow steps:
+
+| Variable | Description |
+|----------|-------------|
+| `IDADIR` | IDA Pro installation directory (same as `ida-dir` output) |
+| `IDABIN` | IDA Pro binary path (same as `ida-bin` output) |
 
 ## 🚀 Complete Example Workflow
 
@@ -84,8 +89,12 @@ jobs:
         uv sync --extra dev
         uv pip install idapro
         
-        # IDADIR is automatically set
+        # IDADIR and IDABIN are automatically set
         echo "IDA installed at: $IDADIR"
+        echo "IDA binary at: $IDABIN"
+        
+        # Run IDA headless
+        "$IDABIN" --help || echo "IDA help not available"
         
         # Run your tests
         uv run pytest -v
