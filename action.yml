@@ -1,0 +1,83 @@
+name: 'Install IDA Pro'
+description: 'Download and install IDA Pro using Hex-Rays Command Line Interface (hcli) - handles all dependencies automatically'
+author: 'HexRaysSA'
+
+inputs:
+  api-key:
+    description: 'HCLI Api Key'
+    required: true
+  installer-id:
+    description: 'IDA Pro installer ID (e.g., "release/9.1/ida-pro/ida-pro_91_x64linux.run")'
+    required: true
+  license-id:
+    description: 'IDA Pro license ID'
+    required: true
+  hcli-version:
+    description: 'Version of ida-hcli to install'
+    required: false
+    default: '0.6.0'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.13
+
+    - name: Install uv
+      shell: bash
+      run: |
+        echo "Installing uv..."
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        
+        # Verify uv installation
+        export PATH="$HOME/.cargo/bin:$PATH"
+        uv --version
+
+    - name: Install Hex-Rays CLI
+      shell: bash
+      run: |
+        echo "Installing ida-hcli..."
+        export PATH="$HOME/.cargo/bin:$PATH"
+        uv tool install ida-hcli
+        # Verify hcli installation
+        hcli --version
+
+    - name: Create IDA installation directory
+      shell: bash
+      run: |
+        echo "Creating installation directory..."
+        sudo mkdir -p /opt/ida
+        sudo chown $USER:$USER /opt/ida
+
+    - name: Download and install IDA Pro
+      shell: bash
+      run: |
+        echo "Downloading and installing IDA Pro..."
+        export PATH="$HOME/.cargo/bin:$PATH"
+        
+        hcli ida install -d "${{ inputs.installer-id }}" -l "${{ inputs.license-id }}" -i /opt/ida
+        
+        echo "IDA Pro installed successfully!"
+        echo "Installation directory: /opt/ida"
+        
+        # Verify installation
+        if [ -d "/opt/ida" ] && [ "$(ls -A /opt/ida)" ]; then
+          echo "Installation contents:"
+          ls -la /opt/ida
+        else
+          echo "Installation directory appears to be empty"
+          exit 1
+        fi
+        
+        # Set IDADIR environment variable for subsequent steps
+        echo "IDADIR=/opt/ida" >> $GITHUB_ENV
+        echo "IDADIR environment variable set to /opt/ida"
+      env:
+        HCLI_API_KEY: ${{ inputs.api-key }}
+
+branding:
+  icon: 'download'
+  color: 'red'

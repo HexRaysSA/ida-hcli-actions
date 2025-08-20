@@ -1,0 +1,80 @@
+name: Test Install IDA Action
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ida_version:
+          - version: "9.1"
+            installer_id: "release/9.1/ida-pro/ida-pro_91_x64linux.run"
+      fail-fast: false
+
+    name: Test IDA ${{ matrix.ida_version.version }} installation
+
+    steps:
+    - name: Checkout action code
+      uses: actions/checkout@v4
+
+    # Test your local action using relative path
+    - name: Test Install IDA Pro Action
+      uses: ./  # This runs the action.yml in the root of your repo
+      with:
+        installer-id: ${{ matrix.ida_version.installer_id }}
+        license-id: ${{ secrets.IDA_LICENSE_ID }}
+        api-key: ${{ secrets.HCLI_API_KEY }}
+
+    # Verify the installation worked
+    - name: Verify Installation
+      run: |
+        echo "Checking IDADIR environment variable..."
+        echo "IDADIR: $IDADIR"
+        
+        echo "Checking if IDA directory exists..."
+        if [ -d "/opt/ida" ]; then
+          echo "IDA directory exists"
+          echo "Contents:"
+          ls -la /opt/ida
+        else
+          echo "IDA directory not found"
+          exit 1
+        fi
+        
+        echo "Checking if uv is available..."
+        if command -v uv &> /dev/null; then
+          echo "uv is installed"
+          uv --version
+        else
+          echo "uv not found"
+          exit 1
+        fi
+        
+        echo "Checking if hcli is available..."
+        if command -v hcli &> /dev/null; then
+          echo "hcli is installed"
+          hcli --version
+        else
+          echo "hcli not found"
+          exit 1
+        fi
+
+    # Test that Python packages can be installed with uv
+    - name: Test uv functionality
+      run: |
+        echo "Testing uv package installation..."
+        uv pip install --system requests
+        python -c "import requests; print('Successfully imported requests')"
+
+    # Optional: Test with a minimal IDA Python script if possible
+    - name: Test basic IDA functionality (optional)
+      run: |
+        echo "Testing basic IDA setup..."
+        echo "IDADIR is set to: $IDADIR"
+        # Add any basic IDA tests here if you have them
