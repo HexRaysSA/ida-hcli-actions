@@ -25,7 +25,7 @@ jobs:
 
     # Test your local action using relative path
     - name: Test Install IDA Pro Action
-      uses: ./  # This runs the action.yml in the root of your repo
+      uses: ./install-ida  # This runs the action.yml in the install-ida directory
       with:
         installer-id: ${{ matrix.ida_version.installer_id }}
         license-id: ${{ secrets.IDA_LICENSE_ID }}

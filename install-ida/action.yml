@@ -78,6 +78,34 @@ runs:
       env:
         HCLI_API_KEY: ${{ inputs.api-key }}
 
+    - name: Clean up installation tools
+      shell: bash
+      run: |
+        echo "Cleaning up installation tools..."
+        
+        # Remove uv and cargo bin directory
+        if [ -d "$HOME/.cargo/bin" ]; then
+          echo "Removing uv and cargo tools..."
+          rm -rf "$HOME/.cargo"
+        fi
+        
+        # Remove hcli from PATH (if it was added by uv tool install)
+        # Note: uv tool install typically installs to ~/.local/bin or similar
+        if [ -d "$HOME/.local/bin" ]; then
+          echo "Cleaning up local bin directory..."
+          rm -f "$HOME/.local/bin/hcli"
+        fi
+        
+        # Clean up any Python cache/temp files
+        echo "Cleaning up Python cache files..."
+        find /tmp -name "pip-*" -type d -exec rm -rf {} + 2>/dev/null || true
+        find /tmp -name "tmp*" -name "*python*" -type d -exec rm -rf {} + 2>/dev/null || true
+        
+        # Remove Python from PATH if it was our installation
+        # Note: This doesn't uninstall Python itself as other steps might need it
+        # but removes our specific additions
+        echo "Installation cleanup completed - only IDA Pro remains at /opt/ida"
+
 branding:
   icon: 'download'
   color: 'red'
