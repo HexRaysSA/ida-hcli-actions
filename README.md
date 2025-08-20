@@ -2,14 +2,39 @@
 
 A GitHub Action to download and install IDA Pro using the Hex-Rays Command Line Interface (hcli). **Handles all dependencies automatically** - no need to set up Python or uv separately!
 
+## 📋 Prerequisites
+
+Before using this action, you need:
+
+1. **Valid IDA Pro License**: You must have a valid IDA Pro license from Hex-Rays
+2. **Hex-Rays CLI API Key**: Create an API key using the Hex-Rays CLI:
+   ```bash
+   hcli auth key create
+   ```
+   For detailed instructions, see the [Hex-Rays CLI documentation](https://hcli.docs.hex-rays.com/)
+
+### Required Repository Secrets
+
+Add these secrets to your GitHub repository:
+
+1. **`IDA_LICENSE_ID`**: Your IDA Pro license identifier (eg: 96-ABCD-EFGH-00)
+2. **`HCLI_API_KEY`**: Your Hex-Rays Command Line Interface API key (eg: hrp-1-f2f4e8.....)
+
+WARNING: Make sure these values are configured as secrets ! Do not hardcode them in your workflow definition 
+
+**To add secrets to your repository:**
+1. Go to your repository → Settings → Secrets and variables → Actions
+2. Click "New repository secret"
+3. Add each required secret with the exact names above
+
 ## ✨ Features
 
-- 🐍 **Automatic Python setup** - Sets up the specified Python version
-- 📦 **Automatic uv installation** - Installs the latest uv package manager
-- 🔧 **Automatic hcli installation** - Installs Hex-Rays CLI tool
 - 📁 **IDA Pro installation** - Downloads and installs IDA Pro to temp directory  
 - 🔗 **Environment setup** - Sets `IDADIR` and `IDABIN` for subsequent steps
 - ✅ **Installation verification** - Verifies successful installation
+- 🔧 **Automatic hcli installation** - Installs Hex-Rays CLI tool
+- 🐍 **Automatic Python setup** - Sets up the specified Python version
+- 📦 **Automatic uv installation** - Installs the latest uv package manager
 - 🧹 **Flexible cleanup** - Option to clean up tools or keep them available
 
 ## Usage
@@ -27,28 +52,20 @@ A GitHub Action to download and install IDA Pro using the Hex-Rays Command Line 
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `installer-id` | IDA Pro installer ID path | ✅ | - |
-| `license-id` | Your IDA Pro license ID | ✅ | - |
-| `api-key` | Hex-Rays Command Line Interface API key | ✅ | - |
-| `python-version` | Python version to set up | ❌ | `3.10` |
-| `hcli-version-specifier` | ida-hcli version specifier (e.g., ">=0.6.0") | ❌ | `>=0.6.0` |
-| `clean` | Clean up tools after installation (true/false) | ❌ | `true` |
+| `api-key` | HCLI Api Key | ✅ | - |
+| `installer-id` | IDA Pro installer ID (e.g., "release/9.1/ida-pro/ida-pro_91_x64linux.run") | ✅ | - |
+| `license-id` | IDA Pro license ID | ✅ | - |
+| `hcli-version-specifier` | Version specifier for ida-hcli to install (e.g., ">=0.6.0", "==0.6.0", "~=0.6.0") | ❌ | `>=0.6.0` |
+| `clean` | Clean up installation tools after IDA installation (true=clean, false=keep tools) | ❌ | `true` |
+| `python-version` | Python version to install | ❌ | `3.10` |
 
 ## Outputs
 
 | Output | Description |
 |--------|-------------|
 | `ida-dir` | Directory where IDA Pro was installed |
-| `ida-bin` | Path to IDA Pro binary (platform-specific) |
+| `ida-bin` | Path to IDA Pro binary |
 
-## Environment Variables Set
-
-For convenience, the action also sets these environment variables for use in subsequent workflow steps:
-
-| Variable | Description |
-|----------|-------------|
-| `IDADIR` | IDA Pro installation directory (same as `ida-dir` output) |
-| `IDABIN` | IDA Pro binary path (same as `ida-bin` output) |
 
 ## 🚀 Complete Example Workflow
 
@@ -74,69 +91,85 @@ jobs:
         api-key: ${{ secrets.HCLI_API_KEY }}
     
     # Option 2: Keep tools available for subsequent steps
-    - name: Install IDA Pro (keep tools)
+    - name: Install IDA Pro
+      id: ida-install
       uses: hexrays/ida-hcli-actions/install-ida@v1
       with:
         installer-id: 'release/9.1/ida-pro/ida-pro_91_x64linux.run'
         license-id: ${{ secrets.IDA_LICENSE_ID }}
         api-key: ${{ secrets.HCLI_API_KEY }}
-        clean: false
+        clean: false  # Keep tools for subsequent steps
     
-    # If clean=false, uv and IDADIR are available for subsequent steps
-    - name: Install Python dependencies and run tests
+    - name: Use IDA Pro
       run: |
-        # uv is available (only if clean=false)
-        uv sync --extra dev
-        uv pip install idapro
-        
-        # IDADIR and IDABIN are automatically set
-        echo "IDA installed at: $IDADIR"
-        echo "IDA binary at: $IDABIN"
+        echo "IDA installed at: ${{ steps.ida-install.outputs.ida-dir }}"
+        echo "IDA binary at: ${{ steps.ida-install.outputs.ida-bin }}"
         
         # Run IDA headless
-        "$IDABIN" --help || echo "IDA help not available"
-        
-        # Run your tests
-        uv run pytest -v
+        "${{ steps.ida-install.outputs.ida-bin }}" --help || echo "IDA help not available"
 ```
 
-## Matrix Strategy Example
+## Cross-Platform Matrix Example
 
 ```yaml
-name: Test Multiple IDA Versions
+name: Test IDA Pro Installation
 
 on: [push, pull_request]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  test-ida:
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        ida:
-          - version: "9.1"
-            installer_id: "release/9.1/ida-pro/ida-pro_91_x64linux.run"
-          - version: "9.2"
-            installer_id: "beta/9.2-beta-3/ida-pro/ida-pro_92_x64linux.run"
+        include:
+          - { os: ubuntu-latest,  platform: linux,   installer_id: "release/9.1/ida-pro/ida-pro_91_x64linux.run" }
+          - { os: windows-latest, platform: windows, installer_id: "release/9.1/ida-pro/ida-pro_91_x64win.exe" }
+          - { os: macos-latest,   platform: macos,   installer_id: "release/9.1/ida-pro/ida-pro_91_armmac.app.zip" }
       fail-fast: false
-      
-    name: Test IDA ${{ matrix.ida.version }}
+
+    name: Test IDA 9.1 on ${{ matrix.platform }}
 
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install IDA Pro ${{ matrix.ida.version }}
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install IDA Pro
+      id: ida-install
       uses: hexrays/ida-hcli-actions/install-ida@v1
       with:
-        installer-id: ${{ matrix.ida.installer_id }}
+        installer-id: ${{ matrix.installer_id }}
         license-id: ${{ secrets.IDA_LICENSE_ID }}
         api-key: ${{ secrets.HCLI_API_KEY }}
-        python-version: '3.11'  # Optional: specify Python version
-        clean: false  # Keep tools for testing
-    
-    - name: Run tests
+
+    - name: Verify Installation
+      shell: bash
       run: |
-        uv sync
-        uv run pytest --ida-version=${{ matrix.ida.version }}
+        echo "IDA installed at: ${{ steps.ida-install.outputs.ida-dir }}"
+        echo "IDA binary at: ${{ steps.ida-install.outputs.ida-bin }}"
+        
+        # Check if IDA directory exists
+        if [ -d "${{ steps.ida-install.outputs.ida-dir }}" ]; then
+          echo "✅ IDA directory exists"
+          ls -la "${{ steps.ida-install.outputs.ida-dir }}"
+        else
+          echo "❌ IDA directory not found"
+          exit 1
+        fi
+
+    - name: Test IDA Binary
+      shell: bash
+      run: |
+        # Test IDA binary (platform-specific)
+        if [ -f "${{ steps.ida-install.outputs.ida-bin }}" ]; then
+          echo "✅ IDA binary found at: ${{ steps.ida-install.outputs.ida-bin }}"
+          "${{ steps.ida-install.outputs.ida-bin }}" --help || echo "IDA help not available"
+        elif [ -f "${{ steps.ida-install.outputs.ida-bin }}.exe" ]; then
+          echo "✅ IDA binary found at: ${{ steps.ida-install.outputs.ida-bin }}.exe"
+          "${{ steps.ida-install.outputs.ida-bin }}.exe" --help || echo "IDA help not available"
+        else
+          echo "❌ IDA binary not found"
+          exit 1
+        fi
 ```
 
 ## 🔧 Advanced Configuration
@@ -184,33 +217,55 @@ Keep Python, uv, and hcli for subsequent workflow steps:
 
 ```yaml
 - name: Install IDA Pro with specific hcli version
+  id: ida-install
   uses: hexrays/ida-hcli-actions/install-ida@v1
   with:
     installer-id: 'release/9.1/ida-pro/ida-pro_91_x64linux.run'
     license-id: ${{ secrets.IDA_LICENSE_ID }}
     api-key: ${{ secrets.HCLI_API_KEY }}
-    hcli-version: '0.5.0'
+    hcli-version-specifier: '==0.6.0'
+
+- name: Use IDA Pro
+  run: |
+    echo "IDA binary: ${{ steps.ida-install.outputs.ida-bin }}"
+    "${{ steps.ida-install.outputs.ida-bin }}" --version
 ```
 
-## Secrets Setup
+### Cross-job Usage
 
-You'll need to add these secrets to your repository:
+```yaml
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    outputs:
+      ida-dir: ${{ steps.ida-install.outputs.ida-dir }}
+      ida-bin: ${{ steps.ida-install.outputs.ida-bin }}
+    steps:
+      - name: Install IDA Pro
+        id: ida-install
+        uses: hexrays/ida-hcli-actions/install-ida@v1
+        with:
+          installer-id: 'release/9.1/ida-pro/ida-pro_91_x64linux.run'
+          license-id: ${{ secrets.IDA_LICENSE_ID }}
+          api-key: ${{ secrets.HCLI_API_KEY }}
 
-1. **`IDA_LICENSE_ID`**: Your IDA Pro license identifier
-2. **`HCLI_API_KEY`**: Your Hex-Rays Command Line Interface API key
-
-To add secrets:
-1. Go to your repository settings
-2. Navigate to "Secrets and variables" → "Actions"
-3. Click "New repository secret"
-4. Add the required secrets
+  test:
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use IDA from previous job
+        run: |
+          echo "IDA directory: ${{ needs.install.outputs.ida-dir }}"
+          echo "IDA binary: ${{ needs.install.outputs.ida-bin }}"
+```
 
 ## Notes
 
-- IDA Pro will be installed to `/opt/ida`
-- The `IDADIR` environment variable is automatically set for subsequent workflow steps
+- IDA Pro is installed to a temporary directory (`$RUNNER_TEMP/opt/ida`)
+- The action provides outputs `ida-dir` and `ida-bin` for subsequent workflow steps
 - This action uses the official Hex-Rays CLI tool for installation
-- The action requires `sudo` permissions to create the installation directory
+- The action works across Linux, Windows, and macOS platforms
+- No `sudo` permissions required - uses temporary directories
 
 ## License
 

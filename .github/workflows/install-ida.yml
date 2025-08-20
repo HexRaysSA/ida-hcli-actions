@@ -26,6 +26,7 @@ jobs:
 
     # Test your local action using relative path
     - name: Test Install IDA Pro Action
+      id: ida-install
       uses: ./install-ida  # This runs the action.yml in the install-ida directory
       with:
         installer-id: ${{ matrix.installer_id }}
@@ -36,25 +37,25 @@ jobs:
     - name: Verify Installation
       shell: bash
       run: |
-        echo "Checking IDADIR environment variable..."
-        echo "IDADIR: $IDADIR"
-        echo "IDABIN: $IDABIN"
+        echo "Checking action outputs..."
+        echo "ida-dir: ${{ steps.ida-install.outputs.ida-dir }}"
+        echo "ida-bin: ${{ steps.ida-install.outputs.ida-bin }}"
         
         echo "Checking if IDA directory exists..."
-        if [ -d "$IDADIR" ]; then
-          echo "IDA directory exists at: $IDADIR"
+        if [ -d "${{ steps.ida-install.outputs.ida-dir }}" ]; then
+          echo "IDA directory exists at: ${{ steps.ida-install.outputs.ida-dir }}"
           echo "Contents:"
-          ls -la "$IDADIR"
+          ls -la "${{ steps.ida-install.outputs.ida-dir }}"
         else
-          echo "IDA directory not found at: $IDADIR"
+          echo "IDA directory not found at: ${{ steps.ida-install.outputs.ida-dir }}"
           exit 1
         fi
         
         echo "Checking if IDA binary exists..."
-        if [ -f "$IDABIN" ] || [ -f "$IDABIN.exe" ]; then
-          echo "IDA binary found at: $IDABIN"
+        if [ -f "${{ steps.ida-install.outputs.ida-bin }}" ] || [ -f "${{ steps.ida-install.outputs.ida-bin }}.exe" ]; then
+          echo "IDA binary found at: ${{ steps.ida-install.outputs.ida-bin }}"
         else
-          echo "IDA binary not found at: $IDABIN"
+          echo "IDA binary not found at: ${{ steps.ida-install.outputs.ida-bin }}"
           exit 1
         fi
 
@@ -63,17 +64,17 @@ jobs:
       shell: bash
       run: |
         echo "Testing basic IDA setup..."
-        echo "IDADIR is set to: $IDADIR"
-        echo "IDABIN is set to: $IDABIN"
+        echo "ida-dir: ${{ steps.ida-install.outputs.ida-dir }}"
+        echo "ida-bin: ${{ steps.ida-install.outputs.ida-bin }}"
         
         # Try to get IDA version (works on all platforms)
-        if [ -f "$IDABIN" ]; then
+        if [ -f "${{ steps.ida-install.outputs.ida-bin }}" ]; then
           echo "Testing IDA binary..."
-          # Most IDA versions support --version or similar
-          "$IDABIN" --help || echo "IDA binary exists but help not available"
-        elif [ -f "$IDABIN.exe" ]; then
+          # Most IDA versions support --help or similar
+          "${{ steps.ida-install.outputs.ida-bin }}" --help || echo "IDA binary exists but help not available"
+        elif [ -f "${{ steps.ida-install.outputs.ida-bin }}.exe" ]; then
           echo "Testing IDA binary (Windows)..."
-          "$IDABIN.exe" --help || echo "IDA binary exists but help not available"
+          "${{ steps.ida-install.outputs.ida-bin }}.exe" --help || echo "IDA binary exists but help not available"
         else
           echo "IDA binary check - file exists verification passed earlier"
         fi

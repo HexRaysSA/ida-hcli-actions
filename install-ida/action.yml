@@ -102,11 +102,7 @@ runs:
         echo "ida-dir=$IDADIR" >> $GITHUB_OUTPUT
         echo "ida-bin=$IDABIN" >> $GITHUB_OUTPUT
         
-        # Also set environment variables for backward compatibility and convenience
-        echo "IDADIR=$IDADIR" >> $GITHUB_ENV
-        echo "IDABIN=$IDABIN" >> $GITHUB_ENV
-        
-        echo "IDA Pro outputs set - IDADIR: $IDADIR, IDABIN: $IDABIN"
+        echo "IDA Pro outputs set - ida-dir: $IDADIR, ida-bin: $IDABIN"
       env:
         HCLI_API_KEY: ${{ inputs.api-key }}
 
