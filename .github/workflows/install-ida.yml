@@ -9,15 +9,16 @@ on:
 
 jobs:
   test-action:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        ida_version:
-          - version: "9.1"
-            installer_id: "release/9.1/ida-pro/ida-pro_91_x64linux.run"
+        include:
+          - { os: ubuntu-latest,  platform: linux,   installer_id: "release/9.1/ida-pro/ida-pro_91_x64linux.run" }
+          - { os: windows-latest, platform: windows, installer_id: "release/9.1/ida-pro/ida-pro_91_x64win.exe" }
+          - { os: macos-latest,   platform: macos,   installer_id: "release/9.1/ida-pro/ida-pro_91_armmac.app.zip" }
       fail-fast: false
 
-    name: Test IDA ${{ matrix.ida_version.version }} installation
+    name: Test IDA 9.1 on ${{ matrix.platform }}
 
     steps:
     - name: Checkout action code
@@ -27,54 +28,52 @@ jobs:
     - name: Test Install IDA Pro Action
       uses: ./install-ida  # This runs the action.yml in the install-ida directory
       with:
-        installer-id: ${{ matrix.ida_version.installer_id }}
+        installer-id: ${{ matrix.installer_id }}
         license-id: ${{ secrets.IDA_LICENSE_ID }}
         api-key: ${{ secrets.HCLI_API_KEY }}
 
     # Verify the installation worked
     - name: Verify Installation
+      shell: bash
       run: |
         echo "Checking IDADIR environment variable..."
         echo "IDADIR: $IDADIR"
+        echo "IDABIN: $IDABIN"
         
         echo "Checking if IDA directory exists..."
-        if [ -d "/opt/ida" ]; then
-          echo "IDA directory exists"
+        if [ -d "$IDADIR" ]; then
+          echo "IDA directory exists at: $IDADIR"
           echo "Contents:"
-          ls -la /opt/ida
+          ls -la "$IDADIR"
         else
-          echo "IDA directory not found"
+          echo "IDA directory not found at: $IDADIR"
           exit 1
         fi
         
-        echo "Checking if uv is available..."
-        if command -v uv &> /dev/null; then
-          echo "uv is installed"
-          uv --version
+        echo "Checking if IDA binary exists..."
+        if [ -f "$IDABIN" ] || [ -f "$IDABIN.exe" ]; then
+          echo "IDA binary found at: $IDABIN"
         else
-          echo "uv not found"
-          exit 1
-        fi
-        
-        echo "Checking if hcli is available..."
-        if command -v hcli &> /dev/null; then
-          echo "hcli is installed"
-          hcli --version
-        else
-          echo "hcli not found"
+          echo "IDA binary not found at: $IDABIN"
           exit 1
         fi
 
-    # Test that Python packages can be installed with uv
-    - name: Test uv functionality
-      run: |
-        echo "Testing uv package installation..."
-        uv pip install --system requests
-        python -c "import requests; print('Successfully imported requests')"
-
-    # Optional: Test with a minimal IDA Python script if possible
-    - name: Test basic IDA functionality (optional)
+    # Test basic IDA functionality by checking version (if tools not cleaned)
+    - name: Test basic IDA functionality
+      shell: bash
       run: |
         echo "Testing basic IDA setup..."
         echo "IDADIR is set to: $IDADIR"
-        # Add any basic IDA tests here if you have them
+        echo "IDABIN is set to: $IDABIN"
+        
+        # Try to get IDA version (works on all platforms)
+        if [ -f "$IDABIN" ]; then
+          echo "Testing IDA binary..."
+          # Most IDA versions support --version or similar
+          "$IDABIN" --help || echo "IDA binary exists but help not available"
+        elif [ -f "$IDABIN.exe" ]; then
+          echo "Testing IDA binary (Windows)..."
+          "$IDABIN.exe" --help || echo "IDA binary exists but help not available"
+        else
+          echo "IDA binary check - file exists verification passed earlier"
+        fi

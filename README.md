@@ -10,12 +10,13 @@ A GitHub Action to download and install IDA Pro using the Hex-Rays Command Line 
 - 📁 **IDA Pro installation** - Downloads and installs IDA Pro to `/opt/ida`
 - 🔗 **Environment setup** - Sets `IDADIR` for subsequent steps
 - ✅ **Installation verification** - Verifies successful installation
+- 🧹 **Flexible cleanup** - Option to clean up tools or keep them available
 
 ## Usage
 
 ```yaml
 - name: Install IDA Pro
-  uses: your-username/install-ida-action@v1
+  uses: hexrays/ida-hcli-actions/install-ida@v1
   with:
     installer-id: 'release/9.1/ida-pro/ida-pro_91_x64linux.run'
     license-id: ${{ secrets.IDA_LICENSE_ID }}
@@ -29,8 +30,9 @@ A GitHub Action to download and install IDA Pro using the Hex-Rays Command Line 
 | `installer-id` | IDA Pro installer ID path | ✅ | - |
 | `license-id` | Your IDA Pro license ID | ✅ | - |
 | `api-key` | Hex-Rays Command Line Interface API key | ✅ | - |
-| `python-version` | Python version to set up | ❌ | `3.13` |
-| `hcli-version` | ida-hcli version to install | ❌ | `0.0.27` |
+| `python-version` | Python version to set up | ❌ | `3.10` |
+| `hcli-version` | ida-hcli version to install | ❌ | `0.6.0` |
+| `clean` | Clean up tools after installation (true/false) | ❌ | `true` |
 
 ## Outputs
 
@@ -58,18 +60,27 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    # That's it! Just install IDA Pro - everything else is handled automatically
-    - name: Install IDA Pro
-      uses: your-username/install-ida-action@v1
+    # Option 1: Clean installation (default) - only IDA Pro remains
+    - name: Install IDA Pro (clean)
+      uses: hexrays/ida-hcli-actions/install-ida@v1
       with:
         installer-id: 'release/9.1/ida-pro/ida-pro_91_x64linux.run'
         license-id: ${{ secrets.IDA_LICENSE_ID }}
         api-key: ${{ secrets.HCLI_API_KEY }}
     
-    # Python, uv, and IDADIR are all ready to use!
+    # Option 2: Keep tools available for subsequent steps
+    - name: Install IDA Pro (keep tools)
+      uses: hexrays/ida-hcli-actions/install-ida@v1
+      with:
+        installer-id: 'release/9.1/ida-pro/ida-pro_91_x64linux.run'
+        license-id: ${{ secrets.IDA_LICENSE_ID }}
+        api-key: ${{ secrets.HCLI_API_KEY }}
+        clean: false
+    
+    # If clean=false, uv and IDADIR are available for subsequent steps
     - name: Install Python dependencies and run tests
       run: |
-        # uv is already available
+        # uv is available (only if clean=false)
         uv sync --extra dev
         uv pip install idapro
         
@@ -105,12 +116,13 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Install IDA Pro ${{ matrix.ida.version }}
-      uses: your-username/install-ida-action@v1
+      uses: hexrays/ida-hcli-actions/install-ida@v1
       with:
         installer-id: ${{ matrix.ida.installer_id }}
         license-id: ${{ secrets.IDA_LICENSE_ID }}
         api-key: ${{ secrets.HCLI_API_KEY }}
         python-version: '3.11'  # Optional: specify Python version
+        clean: false  # Keep tools for testing
     
     - name: Run tests
       run: |
@@ -120,28 +132,55 @@ jobs:
 
 ## 🔧 Advanced Configuration
 
-### Custom Python Version
+### Clean Installation (Default)
+Only IDA Pro remains after installation - all tools are cleaned up:
 
 ```yaml
-- name: Install IDA Pro with Python 3.11
-  uses: your-username/install-ida-action@v1
+- name: Install IDA Pro (clean)
+  uses: hexrays/ida-hcli-actions/install-ida@v1
   with:
     installer-id: 'release/9.1/ida-pro/ida-pro_91_x64linux.run'
     license-id: ${{ secrets.IDA_LICENSE_ID }}
     api-key: ${{ secrets.HCLI_API_KEY }}
-    python-version: '3.11'
+    # clean: true is the default
+```
+
+### Keep Tools Available
+Keep Python, uv, and hcli for subsequent workflow steps:
+
+```yaml
+- name: Install IDA Pro (keep tools)
+  uses: hexrays/ida-hcli-actions/install-ida@v1
+  with:
+    installer-id: 'release/9.1/ida-pro/ida-pro_91_x64linux.run'
+    license-id: ${{ secrets.IDA_LICENSE_ID }}
+    api-key: ${{ secrets.HCLI_API_KEY }}
+    clean: false  # Keep tools available
+```
+
+### Custom Python Version
+
+```yaml
+- name: Install IDA Pro with Python 3.12
+  uses: hexrays/ida-hcli-actions/install-ida@v1
+  with:
+    installer-id: 'release/9.1/ida-pro/ida-pro_91_x64linux.run'
+    license-id: ${{ secrets.IDA_LICENSE_ID }}
+    api-key: ${{ secrets.HCLI_API_KEY }}
+    python-version: '3.12'
+    clean: false
 ```
 
 ### Custom hcli Version
 
 ```yaml
 - name: Install IDA Pro with specific hcli version
-  uses: your-username/install-ida-action@v1
+  uses: hexrays/ida-hcli-actions/install-ida@v1
   with:
     installer-id: 'release/9.1/ida-pro/ida-pro_91_x64linux.run'
     license-id: ${{ secrets.IDA_LICENSE_ID }}
     api-key: ${{ secrets.HCLI_API_KEY }}
-    hcli-version: '0.0.26'
+    hcli-version: '0.5.0'
 ```
 
 ## Secrets Setup

@@ -12,10 +12,18 @@ inputs:
   license-id:
     description: 'IDA Pro license ID'
     required: true
-  hcli-version:
-    description: 'Version of ida-hcli to install'
+  hcli-version-specifier:
+    description: 'Version specifier for ida-hcli to install (e.g., ">=0.6.0", "==0.6.0", "~=0.6.0")'
     required: false
-    default: '0.6.0'
+    default: '>=0.6.0'
+  clean:
+    description: 'Clean up installation tools after IDA installation (true=clean, false=keep tools)'
+    required: false
+    default: 'true'
+  python-version:
+    description: 'Python version to install'
+    required: false
+    default: '3.10'
 
 runs:
   using: 'composite'
@@ -23,7 +31,7 @@ runs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: 3.11
+        python-version: ${{ inputs.python-version }}
 
     - name: Install uv
       shell: bash
@@ -41,7 +49,7 @@ runs:
       run: |
         echo "Installing ida-hcli..."
         export PATH="$HOME/.cargo/bin:$PATH"
-        uv tool install ida-hcli
+        uv tool install "ida-hcli${{ inputs.hcli-version-specifier }}"
         # Verify hcli installation
         hcli --version
 
@@ -49,8 +57,15 @@ runs:
       shell: bash
       run: |
         echo "Creating installation directory..."
-        sudo mkdir -p /opt/ida
-        sudo chown $USER:$USER /opt/ida
+        
+        # Always use temp directory
+        IDADIR="${{ runner.temp }}/opt/ida"
+        
+        echo "IDADIR=$IDADIR" >> $GITHUB_ENV
+        echo "Using IDA directory: $IDADIR"
+        
+        # Create directory (no sudo needed for temp directory)
+        mkdir -p "$IDADIR"
 
     - name: Download and install IDA Pro
       shell: bash
@@ -58,27 +73,34 @@ runs:
         echo "Downloading and installing IDA Pro..."
         export PATH="$HOME/.cargo/bin:$PATH"
         
-        hcli ida install -d "${{ inputs.installer-id }}" -l "${{ inputs.license-id }}" -i /opt/ida
+        hcli ida install -d "${{ inputs.installer-id }}" -l "${{ inputs.license-id }}" -i "$IDADIR"
         
         echo "IDA Pro installed successfully!"
-        echo "Installation directory: /opt/ida"
+        echo "Installation directory: $IDADIR"
         
         # Verify installation
-        if [ -d "/opt/ida" ] && [ "$(ls -A /opt/ida)" ]; then
+        if [ -d "$IDADIR" ] && [ "$(ls -A "$IDADIR")" ]; then
           echo "Installation contents:"
-          ls -la /opt/ida
+          ls -la "$IDADIR"
         else
           echo "Installation directory appears to be empty"
           exit 1
         fi
         
-        # Set IDADIR environment variable for subsequent steps
-        echo "IDADIR=/opt/ida" >> $GITHUB_ENV
-        echo "IDADIR environment variable set to /opt/ida"
+        # Set IDABIN environment variable based on platform
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+          IDABIN="$IDADIR/Contents/MacOS/ida"
+        else
+          IDABIN="$IDADIR/ida"
+        fi
+        
+        echo "IDABIN=$IDABIN" >> $GITHUB_ENV
+        echo "IDABIN environment variable set to $IDABIN"
       env:
         HCLI_API_KEY: ${{ inputs.api-key }}
 
     - name: Clean up installation tools
+      if: inputs.clean == 'true'
       shell: bash
       run: |
         echo "Cleaning up installation tools..."
@@ -104,7 +126,19 @@ runs:
         # Remove Python from PATH if it was our installation
         # Note: This doesn't uninstall Python itself as other steps might need it
         # but removes our specific additions
-        echo "Installation cleanup completed - only IDA Pro remains at /opt/ida"
+        echo "Installation cleanup completed - only IDA Pro remains at $IDADIR"
+
+    - name: Keep installation tools available
+      if: inputs.clean == 'false'
+      shell: bash
+      run: |
+        echo "Installation tools kept available:"
+        echo "- Python ${{ inputs.python-version }} (via actions/setup-python)"
+        echo "- uv (in ~/.cargo/bin)"
+        echo "- hcli (in ~/.local/bin or uv tools)"
+        echo "- IDA Pro (in $IDADIR)"
+        echo ""
+        echo "Tools are available for subsequent workflow steps."
 
 branding:
   icon: 'download'
