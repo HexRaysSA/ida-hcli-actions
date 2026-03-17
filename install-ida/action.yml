@@ -77,7 +77,7 @@ runs:
         echo "Downloading and installing IDA Pro..."
         export PATH="$HOME/.cargo/bin:$PATH"
         
-        hcli ida install -d "${{ inputs.installer-id }}" -l "${{ inputs.license-id }}" -i "$IDADIR"
+        hcli ida install -y -d "${{ inputs.installer-id }}" -l "${{ inputs.license-id }}" -i "$IDADIR"
         
         echo "IDA Pro installed successfully!"
         echo "Installation directory: $IDADIR"
