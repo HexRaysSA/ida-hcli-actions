@@ -67,8 +67,8 @@ runs:
         echo "IDADIR=$IDADIR" >> $GITHUB_ENV
         echo "Using IDA directory: $IDADIR"
         
-        # Create directory (no sudo needed for temp directory)
-        mkdir -p "$IDADIR"
+        # Create parent directory (hcli will create the final directory itself)
+        mkdir -p "$(dirname "$IDADIR")"
 
     - name: Download and install IDA Pro
       id: install
