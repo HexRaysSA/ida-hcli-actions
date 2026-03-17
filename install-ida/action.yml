@@ -56,19 +56,11 @@ runs:
         # Verify hcli installation
         hcli --version
 
-    - name: Create IDA installation directory
+    - name: Set IDA installation directory
       shell: bash
       run: |
-        echo "Creating installation directory..."
-        
-        # Always use temp directory
         IDADIR="${{ runner.temp }}/opt/ida"
-        
         echo "IDADIR=$IDADIR" >> $GITHUB_ENV
-        echo "Using IDA directory: $IDADIR"
-        
-        # Create parent directory (hcli will create the final directory itself)
-        mkdir -p "$(dirname "$IDADIR")"
 
     - name: Download and install IDA Pro
       id: install
