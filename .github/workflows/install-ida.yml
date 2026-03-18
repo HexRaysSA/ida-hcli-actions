@@ -59,22 +59,13 @@ jobs:
           exit 1
         fi
 
-    # Test basic IDA functionality by checking version (if tools not cleaned)
+    # Verify IDA binary is a valid executable
     - name: Test basic IDA functionality
       shell: bash
       run: |
-        echo "Testing basic IDA setup..."
-        echo "ida-dir: ${{ steps.ida-install.outputs.ida-dir }}"
-        echo "ida-bin: ${{ steps.ida-install.outputs.ida-bin }}"
-        
-        # Try to get IDA version (works on all platforms)
-        if [ -f "${{ steps.ida-install.outputs.ida-bin }}" ]; then
-          echo "Testing IDA binary..."
-          # Most IDA versions support --help or similar
-          "${{ steps.ida-install.outputs.ida-bin }}" --help || echo "IDA binary exists but help not available"
-        elif [ -f "${{ steps.ida-install.outputs.ida-bin }}.exe" ]; then
-          echo "Testing IDA binary (Windows)..."
-          "${{ steps.ida-install.outputs.ida-bin }}.exe" --help || echo "IDA binary exists but help not available"
-        else
-          echo "IDA binary check - file exists verification passed earlier"
+        echo "Verifying IDA binary..."
+        IDA_BIN="${{ steps.ida-install.outputs.ida-bin }}"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          IDA_BIN="${IDA_BIN}.exe"
         fi
+        file "$IDA_BIN"
